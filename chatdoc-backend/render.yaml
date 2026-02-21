@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: chatdoc-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # 'starter' plan: 512 MB RAM, no sleep — minimum viable for Legal-BERT
+    # Upgrade to 'standard' (2 GB RAM) for comfortable operation
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+
+    envVars:
+      # Zilliz Cloud credentials — set these in the Render dashboard
+      - key: CLUSTER_ENDPOINT
+        sync: false
+      - key: TOKEN
+        sync: false
+
+      # OpenAI API key — set in the Render dashboard
+      - key: OPENAI_API_KEY
+        sync: false
+
+      # Restrict CORS to your Vercel deployment URL in production.
+      # Example: https://chatdoc.vercel.app
+      # Leave as '*' for development / testing.
+      - key: ALLOWED_ORIGINS
+        value: "*"

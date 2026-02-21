@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #faf9ff;
+  --bg-sidebar: #f0ecff;
+  --sidebar-hover: #e9e3ff;
+  --sidebar-active: #ddd6fe;
+  --accent: #7c3aed;
+  --accent-light: #a78bfa;
+  --accent-soft: #ede9fe;
+  --text-primary: #1e1b4b;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --border-soft: #f3f4f6;
+  --user-bubble: #e0e7ff;
+  --ai-bubble: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #ddd6fe;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c4b5fd;
+}
+
+/* Highlight pulse animation on creation */
+@keyframes highlight-pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+.highlight-new {
+  animation: highlight-pulse 0.5s ease-in-out 2;
+}
+
+/* Slide in from right */
+@keyframes slide-in-right {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.slide-in-right {
+  animation: slide-in-right 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fade up for new messages */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.fade-up {
+  animation: fade-up 0.18s ease-out;
+}
+
+/* Popup scale in */
+@keyframes popup-in {
+  from { opacity: 0; transform: scale(0.94) translateY(4px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+.popup-in {
+  animation: popup-in 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Typing dots */
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30%           { transform: translateY(-4px); }
+}
+
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a78bfa;
+  animation: typing-bounce 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.30s; }
+
+/* Document highlight spans */
+.doc-highlight {
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 1px 0;
+  transition: filter 0.12s ease;
+}
+.doc-highlight:hover {
+  filter: brightness(0.93) saturate(1.2);
+}
+.doc-highlight.active-highlight {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 1px;
+}
