@@ -18,7 +18,7 @@ from huggingface_hub import InferenceClient
 
 logger = logging.getLogger(__name__)
 
-EMBED_MODEL = "nlpaueb/legal-bert-base-uncased"
+EMBED_MODEL = "BAAI/bge-base-en-v1.5"
 EMBED_DIM = 768
 
 _client: InferenceClient | None = None
