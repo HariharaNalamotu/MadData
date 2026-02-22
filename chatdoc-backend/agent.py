@@ -1,5 +1,7 @@
 """
 Agentic query router and LLM streaming helpers.
+Uses HuggingFace free Inference API for all LLM operations via its
+OpenAI-compatible /v1/chat/completions endpoint — no API key purchase required.
 
 Routing logic:
   - 'rag'    → query requires retrieving specific content from the uploaded contract
@@ -8,22 +10,27 @@ Routing logic:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from typing import Iterator, List
 
-from openai import OpenAI
+import requests
 
 logger = logging.getLogger(__name__)
 
-_client: OpenAI | None = None
+# Free HuggingFace model. Override via HF_CHAT_MODEL env var.
+# Other options: "HuggingFaceH4/zephyr-7b-beta", "microsoft/Phi-3-mini-4k-instruct"
+_CHAT_MODEL = os.environ.get("HF_CHAT_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
+_HF_CHAT_URL = "https://api-inference.huggingface.co/v1/chat/completions"
 
 
-def get_openai() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    return _client
+def _hf_headers() -> dict:
+    token = os.environ.get("HF_TOKEN", "")
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 
 # ---------------------------------------------------------------------------
@@ -47,16 +54,23 @@ No explanation, no punctuation."""
 def classify_query(query: str) -> str:
     """Returns 'rag' or 'direct'."""
     try:
-        resp = get_openai().chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": _CLASSIFIER_SYSTEM},
-                {"role": "user",   "content": query},
-            ],
-            max_tokens=5,
-            temperature=0,
+        resp = requests.post(
+            _HF_CHAT_URL,
+            headers=_hf_headers(),
+            json={
+                "model": _CHAT_MODEL,
+                "messages": [
+                    {"role": "system", "content": _CLASSIFIER_SYSTEM},
+                    {"role": "user",   "content": query},
+                ],
+                "max_tokens": 5,
+                "temperature": 0,
+                "stream": False,
+            },
+            timeout=30,
         )
-        label = resp.choices[0].message.content.strip().lower()
+        resp.raise_for_status()
+        label = resp.json()["choices"][0]["message"]["content"].strip().lower()
         result = "rag" if "rag" in label else "direct"
         logger.info("classify_query → '%s' for: %s", result, query[:80])
         return result
@@ -76,11 +90,6 @@ def stream_rag_response(
 ) -> Iterator[str]:
     """
     Answer a document-specific query using retrieved chunks as grounding context.
-
-    Args:
-        query:          The user's question.
-        context_chunks: List of {header, text, score} from milvus_store.search_similar().
-        history:        Prior conversation turns [{role, content}, ...].
     """
     context_text = "\n\n".join(
         f"[{c['header']}]\n{c['text']}" for c in context_chunks
@@ -147,14 +156,36 @@ def stream_explain_response(
 # ---------------------------------------------------------------------------
 
 def _stream(messages: List[dict], temperature: float) -> Iterator[str]:
-    """Shared streaming wrapper around OpenAI chat completions."""
-    stream = get_openai().chat.completions.create(
-        model="gpt-4o-mini",
-        messages=messages,
+    """Stream via HuggingFace Inference API OpenAI-compatible SSE endpoint."""
+    response = requests.post(
+        _HF_CHAT_URL,
+        headers=_hf_headers(),
+        json={
+            "model": _CHAT_MODEL,
+            "messages": messages,
+            "max_tokens": 1024,
+            "temperature": temperature,
+            "stream": True,
+        },
         stream=True,
-        temperature=temperature,
+        timeout=60,
     )
-    for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            yield delta
+    response.raise_for_status()
+
+    for line in response.iter_lines():
+        if not line:
+            continue
+        if isinstance(line, bytes):
+            line = line.decode("utf-8")
+        if not line.startswith("data: "):
+            continue
+        data = line[6:]
+        if data == "[DONE]":
+            break
+        try:
+            chunk = json.loads(data)
+            delta = chunk["choices"][0]["delta"].get("content", "")
+            if delta:
+                yield delta
+        except (json.JSONDecodeError, KeyError, IndexError):
+            continue

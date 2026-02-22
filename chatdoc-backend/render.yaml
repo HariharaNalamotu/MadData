@@ -3,8 +3,7 @@ services:
     name: chatdoc-backend
     runtime: docker
     dockerfilePath: ./Dockerfile
-    # 'starter' plan: 512 MB RAM, no sleep — minimum viable for Legal-BERT
-    # Upgrade to 'standard' (2 GB RAM) for comfortable operation
+    # 'starter' plan: 512 MB RAM — sufficient now that all models run via HF API
     plan: starter
     region: oregon
     healthCheckPath: /health
@@ -16,9 +15,14 @@ services:
       - key: TOKEN
         sync: false
 
-      # OpenAI API key — set in the Render dashboard
-      - key: OPENAI_API_KEY
+      # HuggingFace token — https://huggingface.co/settings/tokens (free account)
+      # Used for both Legal-BERT embeddings and Mistral chat completions
+      - key: HF_TOKEN
         sync: false
+
+      # Optional: override the default chat model (mistralai/Mistral-7B-Instruct-v0.3)
+      # - key: HF_CHAT_MODEL
+      #   value: "HuggingFaceH4/zephyr-7b-beta"
 
       # Restrict CORS to your Vercel deployment URL in production.
       # Example: https://chatdoc.vercel.app
