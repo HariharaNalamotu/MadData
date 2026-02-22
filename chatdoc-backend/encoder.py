@@ -1,10 +1,10 @@
 """
-Text embeddings via HuggingFace free Serverless Inference API.
+Legal-BERT embeddings via HuggingFace InferenceClient.
 
-Model: BAAI/bge-base-en-v1.5
-  - 768-dim (same as Legal-BERT — no Milvus schema change needed)
-  - Consistently available on the HF free tier
-  - Strong performance on retrieval/search tasks
+Model: nlpaueb/legal-bert-base-uncased
+  - 768-dim BERT model trained on legal corpora
+  - Runs remotely on HF serverless infrastructure — zero local RAM
+  - Response shape: [batch, seq_len, 768] — mean-pooled to [batch, 768]
 """
 
 from __future__ import annotations
@@ -14,29 +14,38 @@ import os
 from typing import List, Union
 
 import numpy as np
-import requests
+from huggingface_hub import InferenceClient
 
 logger = logging.getLogger(__name__)
 
+EMBED_MODEL = "nlpaueb/legal-bert-base-uncased"
 EMBED_DIM = 768
-_MODEL = "BAAI/bge-base-en-v1.5"
-_HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{_MODEL}"
+
+_client: InferenceClient | None = None
 
 
-def _headers() -> dict:
-    token = os.environ.get("HF_TOKEN", "")
-    return {"Authorization": f"Bearer {token}"} if token else {}
+def get_client() -> InferenceClient:
+    global _client
+    if _client is None:
+        _client = InferenceClient(token=os.environ.get("HF_TOKEN", ""))
+    return _client
 
 
 def encode(
     texts: Union[str, List[str]],
     max_length: int = 256,
     normalize: bool = True,
-    batch_size: int = 16,
+    batch_size: int = 8,
 ) -> List[List[float]]:
     """
-    Encode texts and return List[List[float]] of shape [len(texts), EMBED_DIM].
-    JSON-safe and directly usable with Milvus insert().
+    Encode texts with Legal-BERT and return List[List[float]] of shape
+    [len(texts), EMBED_DIM]. JSON-safe and directly usable with Milvus.
+
+    Args:
+        texts:      Single string or list of strings.
+        max_length: Approximate token limit (converted to chars for truncation).
+        normalize:  L2-normalise embeddings (recommended for cosine similarity).
+        batch_size: Texts per API call. Keep small to avoid HF request size limits.
     """
     if isinstance(texts, str):
         texts = [texts]
@@ -45,34 +54,48 @@ def encode(
 
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
+        # Rough char truncation (~5 chars/token) to stay within BERT's 512-token limit
         batch = [t[: max_length * 5] for t in batch]
 
-        response = requests.post(
-            _HF_API_URL,
-            headers=_headers(),
-            json={"inputs": batch, "options": {"wait_for_model": True}},
-            timeout=60,
-        )
-        response.raise_for_status()
+        # InferenceClient.feature_extraction returns np.ndarray.
+        # For Legal-BERT with a list of texts:
+        #   shape [batch, seq_len, 768]  — BERT token-level output, needs pooling
+        # For sentence-transformer models:
+        #   shape [batch, 768]           — already pooled
+        # For a single text:
+        #   shape [seq_len, 768] or [768]
+        result = get_client().feature_extraction(batch, model=EMBED_MODEL)
+        arr = np.array(result, dtype=np.float32)
 
-        result = response.json()
-
-        # HF API response shape varies by model:
-        #   sentence-transformer models → [batch, hidden_size]  (already pooled)
-        #   raw BERT models             → [batch, seq_len, hidden_size]
-        # Handle both so a model swap never breaks this.
-        for item in result:
-            arr = np.array(item, dtype=np.float32)
-            pooled = arr.mean(axis=0) if arr.ndim == 2 else arr  # pool if needed
-            if normalize:
-                norm = float(np.linalg.norm(pooled))
-                if norm > 0:
-                    pooled = pooled / norm
-            all_embeddings.append(pooled.tolist())
+        if arr.ndim == 3:
+            # [batch, seq_len, hidden] — mean-pool each sequence
+            for j in range(arr.shape[0]):
+                pooled = arr[j].mean(axis=0)
+                all_embeddings.append(_maybe_normalize(pooled, normalize))
+        elif arr.ndim == 2:
+            if arr.shape[0] == len(batch) and arr.shape[1] == EMBED_DIM:
+                # [batch, hidden] — already pooled (sentence-transformer style)
+                for j in range(arr.shape[0]):
+                    all_embeddings.append(_maybe_normalize(arr[j], normalize))
+            else:
+                # [seq_len, hidden] — single text, mean-pool
+                pooled = arr.mean(axis=0)
+                all_embeddings.append(_maybe_normalize(pooled, normalize))
+        elif arr.ndim == 1:
+            # [hidden] — single text already pooled
+            all_embeddings.append(_maybe_normalize(arr, normalize))
 
     return all_embeddings
 
 
+def _maybe_normalize(vec: np.ndarray, normalize: bool) -> List[float]:
+    if normalize:
+        norm = float(np.linalg.norm(vec))
+        if norm > 0:
+            vec = vec / norm
+    return vec.tolist()
+
+
 def warmup() -> None:
     """No-op — no local model to warm up."""
-    logger.info("Encoder: using HuggingFace Inference API (model: %s)", _MODEL)
+    logger.info("Encoder: Legal-BERT via HuggingFace InferenceClient (remote).")

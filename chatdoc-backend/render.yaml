@@ -16,13 +16,14 @@ services:
         sync: false
 
       # HuggingFace token — https://huggingface.co/settings/tokens (free account)
-      # Used for both Legal-BERT embeddings and Mistral chat completions
+      # Used for Legal-BERT embeddings AND Llama generation via InferenceClient
+      # NOTE: accept the Meta Llama license at huggingface.co/meta-llama first
       - key: HF_TOKEN
         sync: false
 
-      # Optional: override the default chat model (mistralai/Mistral-7B-Instruct-v0.3)
-      # - key: HF_CHAT_MODEL
-      #   value: "HuggingFaceH4/zephyr-7b-beta"
+      # Chat model — Qwen2.5-72B-Instruct (Apache 2.0, no license gate)
+      - key: HF_CHAT_MODEL
+        value: "Qwen/Qwen2.5-72B-Instruct"
 
       # Restrict CORS to your Vercel deployment URL in production.
       # Example: https://chatdoc.vercel.app
