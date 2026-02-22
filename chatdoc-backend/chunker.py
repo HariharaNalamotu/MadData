@@ -29,8 +29,24 @@ HEADER_PATTERNS = [
 ]
 HEADER_RE = re.compile("|".join(f"(?:{p})" for p in HEADER_PATTERNS))
 
-# Maximum characters per chunk before forcing a split (safety valve)
+# Maximum characters per chunk (safety valve).
+# BGE-base truncates at ~512 tokens ≈ 1500–2000 chars; keeping chunks under
+# 6000 chars preserves context while staying well within Milvus VARCHAR limits.
 MAX_CHUNK_CHARS = 6000
+
+
+def _force_split(text: str, max_chars: int) -> list:
+    """Split text into pieces of at most max_chars, breaking at word boundaries."""
+    parts = []
+    while len(text) > max_chars:
+        idx = text.rfind(" ", 0, max_chars)
+        if idx <= 0:
+            idx = max_chars  # no space found — hard split
+        parts.append(text[:idx])
+        text = text[idx:].lstrip()
+    if text:
+        parts.append(text)
+    return parts
 
 
 def normalize_contract_text(text: str) -> str:
@@ -84,8 +100,17 @@ def clause_chunk(text: str) -> List[Clause]:
         if len(combined) <= MAX_CHUNK_CHARS:
             result.append(clause)
         else:
-            # Split by paragraph within the clause
-            paragraphs = clause.body.split("\n\n")
+            # Split by paragraph within the clause; force-split any paragraph
+            # that is itself larger than MAX_CHUNK_CHARS (e.g. dense legal prose
+            # with no blank lines), which the original `and buf` guard missed.
+            raw_paras = clause.body.split("\n\n")
+            paragraphs: List[str] = []
+            for p in raw_paras:
+                if len(p) > MAX_CHUNK_CHARS:
+                    paragraphs.extend(_force_split(p, MAX_CHUNK_CHARS))
+                else:
+                    paragraphs.append(p)
+
             buf: List[str] = []
             buf_len = len(clause.header) + 1
             sub_idx = 0

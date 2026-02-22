@@ -35,8 +35,8 @@ def _create_collection(client: MilvusClient) -> None:
     schema.add_field("id",          DataType.INT64,        is_primary=True)
     schema.add_field("doc_id",      DataType.VARCHAR,      max_length=64)
     schema.add_field("chunk_index", DataType.INT64)
-    schema.add_field("header",      DataType.VARCHAR,      max_length=512)
-    schema.add_field("text",        DataType.VARCHAR,      max_length=8192)
+    schema.add_field("header",      DataType.VARCHAR,      max_length=1024)
+    schema.add_field("text",        DataType.VARCHAR,      max_length=65535)
     schema.add_field("embedding",   DataType.FLOAT_VECTOR, dim=EMBED_DIM)
 
     index_params = client.prepare_index_params()
@@ -76,6 +76,20 @@ def ensure_collection() -> None:
     _create_collection(client)
 
 
+def _utf8_truncate(text: str, max_bytes: int) -> str:
+    """Truncate text so its UTF-8 encoding is at most max_bytes bytes.
+
+    Milvus VARCHAR max_length is measured in UTF-8 bytes, not Python characters.
+    Legal documents contain many multi-byte characters (em-dashes, curly quotes,
+    section symbols) that make a naive [:N] character slice exceed the byte limit.
+    """
+    encoded = text.encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return text
+    # Truncate bytes then decode safely (drop any incomplete multi-byte tail)
+    return encoded[:max_bytes].decode("utf-8", errors="ignore")
+
+
 def insert_chunks(doc_id: str, chunks: List[dict], embeddings: List[List[float]]) -> int:
     """
     Insert encoded chunks into Milvus.
@@ -94,8 +108,8 @@ def insert_chunks(doc_id: str, chunks: List[dict], embeddings: List[List[float]]
         rows.append({
             "doc_id":      doc_id,
             "chunk_index": int(chunk["chunk_index"]),
-            "header":      chunk["header"][:512],
-            "text":        chunk["text"][:8192],
+            "header":      _utf8_truncate(chunk["header"], 1000),
+            "text":        _utf8_truncate(chunk["text"],   65000),
             "embedding":   emb,
         })
 
