@@ -70,7 +70,7 @@ export default function SidePanel({
   return (
     <div
       className="flex flex-col h-full slide-in-right"
-      style={{ background: 'white', borderLeft: '1px solid var(--border)' }}
+      style={{ background: '#111111', borderLeft: '1px solid var(--border)' }}
     >
       {/* Header */}
       <div
@@ -95,14 +95,14 @@ export default function SidePanel({
             className="rounded-lg px-2.5 py-1.5 text-xs leading-relaxed"
             style={{ background: colors.bg, border: `1px solid ${colors.border}` }}
           >
-            <p className="line-clamp-2" style={{ color: '#374151' }}>
+            <p className="line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
               {highlight.selectedText}
             </p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors mt-0.5"
+          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors mt-0.5"
         >
           <X size={14} style={{ color: 'var(--text-muted)' }} />
         </button>
@@ -116,13 +116,13 @@ export default function SidePanel({
           <div
             className="rounded-xl p-3.5"
             style={{
-              background: 'linear-gradient(135deg, #faf9ff, #f5f3ff)',
-              border: '1px solid #ede9fe',
+              background: 'linear-gradient(135deg, #1a1a1a, #1f1a2e)',
+              border: '1px solid #2a2a2a',
             }}
           >
             <div className="flex items-center gap-1.5 mb-2">
-              <BookOpen size={12} style={{ color: '#8b5cf6' }} />
-              <span className="text-xs font-semibold" style={{ color: '#7c3aed' }}>
+              <BookOpen size={12} style={{ color: '#f59e0b' }} />
+              <span className="text-xs font-semibold" style={{ color: '#fbbf24' }}>
                 Plain-language explanation
               </span>
             </div>
@@ -135,7 +135,7 @@ export default function SidePanel({
             ) : (
               <p
                 className="text-xs leading-relaxed whitespace-pre-wrap"
-                style={{ color: '#374151' }}
+                style={{ color: 'var(--text-secondary)' }}
               >
                 {highlight.explanation}
               </p>
@@ -156,7 +156,7 @@ export default function SidePanel({
               Ask about this selection
             </p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              {chatbotName} will search the contract using BGE RAG for
+              {chatbotName} will search the contract using LegalBERT RAG for
               specific questions, or answer general legal concepts directly.
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function SidePanel({
 
         {messages.length === 0 && isExplainMode && (highlight.explanation || highlight.explainLoading) && (
           <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-            Follow-up questions below are answered using BGE RAG on your contract.
+            Follow-up questions below are answered using LegalBERT RAG on your contract.
           </p>
         )}
 
@@ -184,8 +184,8 @@ export default function SidePanel({
         ))}
         {isLoading && status && (
           <div className="flex items-center gap-1.5 px-1 py-0.5">
-            <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: '#8b5cf6' }} />
-            <span className="text-xs font-medium" style={{ color: '#8b5cf6' }}>{status}</span>
+            <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: '#f59e0b' }} />
+            <span className="text-xs font-medium" style={{ color: '#f59e0b' }}>{status}</span>
           </div>
         )}
         {isLoading && messages[messages.length - 1]?.role === 'user' && (
@@ -199,10 +199,10 @@ export default function SidePanel({
         <div
           className="flex items-end gap-2 rounded-xl px-3 py-2.5 transition-all"
           style={{
-            background: '#faf9ff',
+            background: '#1a1a1a',
             border: '1.5px solid',
-            borderColor: input ? '#c4b5fd' : '#e5e7eb',
-            boxShadow: input ? '0 0 0 3px #ede9fe' : 'none',
+            borderColor: input ? '#f59e0b' : '#2a2a2a',
+            boxShadow: input ? '0 0 0 3px rgba(245,158,11,0.2)' : 'none',
           }}
         >
           <textarea
@@ -219,7 +219,7 @@ export default function SidePanel({
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
             className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center transition-all disabled:opacity-30"
-            style={{ background: input.trim() ? '#7c3aed' : '#e5e7eb' }}
+            style={{ background: input.trim() ? '#f59e0b' : '#2a2a2a' }}
           >
             {isLoading ? (
               <Loader2 size={12} className="text-white animate-spin" />

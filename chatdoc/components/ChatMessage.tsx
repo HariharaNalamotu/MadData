@@ -9,7 +9,7 @@ interface ChatMessageProps {
   isStreaming?: boolean;
 }
 
-export default function ChatMessage({ role, content, chatbotName = 'DocChat', isStreaming }: ChatMessageProps) {
+export default function ChatMessage({ role, content, chatbotName = 'LexDoc', isStreaming }: ChatMessageProps) {
   const isUser = role === 'user';
 
   return (
@@ -19,8 +19,8 @@ export default function ChatMessage({ role, content, chatbotName = 'DocChat', is
         className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
         style={{
           background: isUser
-            ? 'linear-gradient(135deg, #818cf8, #c084fc)'
-            : 'linear-gradient(135deg, #34d399, #60a5fa)',
+            ? 'linear-gradient(135deg, #f59e0b, #ec4899)'
+            : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
         }}
       >
         {isUser ? (
@@ -34,8 +34,8 @@ export default function ChatMessage({ role, content, chatbotName = 'DocChat', is
       <div
         className="max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed"
         style={{
-          background: isUser ? '#e0e7ff' : '#f8f7ff',
-          color: isUser ? '#3730a3' : '#1e1b4b',
+          background: isUser ? '#1e2d3d' : '#1e1e1e',
+          color: isUser ? '#bfdbfe' : '#e5e7eb',
           borderBottomRightRadius: isUser ? '4px' : '16px',
           borderBottomLeftRadius: isUser ? '16px' : '4px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)',

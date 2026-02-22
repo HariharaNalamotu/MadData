@@ -30,7 +30,7 @@ HEADER_PATTERNS = [
 HEADER_RE = re.compile("|".join(f"(?:{p})" for p in HEADER_PATTERNS))
 
 # Maximum characters per chunk (safety valve).
-# BGE-base truncates at ~512 tokens ≈ 1500–2000 chars; keeping chunks under
+# LegalBERT truncates at ~512 tokens ≈ 1500–2000 chars; keeping chunks under
 # 6000 chars preserves context while staying well within Milvus VARCHAR limits.
 MAX_CHUNK_CHARS = 6000
 

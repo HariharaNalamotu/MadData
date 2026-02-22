@@ -100,7 +100,7 @@ export default function Sidebar({
         <div className="flex items-center gap-2 mb-1">
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #8b5cf6, #ec4899)' }}
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #ec4899)' }}
           >
             <Scale size={13} className="text-white" />
           </div>
@@ -122,19 +122,19 @@ export default function Sidebar({
           onClick={() => !uploading && fileInputRef.current?.click()}
           className="rounded-xl border-2 border-dashed p-4 text-center transition-all duration-200"
           style={{
-            borderColor: dragOver ? '#8b5cf6' : '#c4b5fd',
-            background:  dragOver ? '#ede9fe' : uploading ? '#faf9ff' : 'rgba(255,255,255,0.6)',
+            borderColor: dragOver ? '#f59e0b' : '#3a3a3a',
+            background:  dragOver ? 'rgba(245,158,11,0.1)' : uploading ? '#1f1f1f' : 'rgba(255,255,255,0.03)',
             cursor: uploading ? 'wait' : 'pointer',
           }}
         >
           <div
             className="w-8 h-8 rounded-lg mx-auto mb-2 flex items-center justify-center"
-            style={{ background: dragOver ? '#8b5cf6' : '#ede9fe' }}
+            style={{ background: dragOver ? '#f59e0b' : 'rgba(245,158,11,0.15)' }}
           >
             {uploading ? (
-              <Loader2 size={14} style={{ color: '#8b5cf6' }} className="animate-spin" />
+              <Loader2 size={14} style={{ color: '#f59e0b' }} className="animate-spin" />
             ) : (
-              <Upload size={14} style={{ color: dragOver ? 'white' : '#8b5cf6' }} />
+              <Upload size={14} style={{ color: dragOver ? '#111111' : '#f59e0b' }} />
             )}
           </div>
           <p className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -168,7 +168,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-2 pb-2">
         {files.length === 0 ? (
           <div className="text-center py-8 px-3">
-            <FilePlus size={28} className="mx-auto mb-2 opacity-30" style={{ color: '#8b5cf6' }} />
+            <FilePlus size={28} className="mx-auto mb-2 opacity-30" style={{ color: '#f59e0b' }} />
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               No documents yet. Upload a contract to get started.
             </p>
@@ -190,7 +190,7 @@ export default function Sidebar({
                   className="group relative flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all duration-150"
                   style={{
                     background: isActive ? 'var(--sidebar-active)' : 'transparent',
-                    color: isActive ? '#5b21b6' : 'var(--text-primary)',
+                    color: isActive ? '#fbbf24' : 'var(--text-primary)',
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive)
@@ -203,9 +203,9 @@ export default function Sidebar({
                 >
                   <div
                     className="w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center"
-                    style={{ background: isActive ? '#ede9fe' : '#e5e7eb' }}
+                    style={{ background: isActive ? 'rgba(245,158,11,0.2)' : '#2a2a2a' }}
                   >
-                    <FileText size={13} style={{ color: isActive ? '#7c3aed' : '#9ca3af' }} />
+                    <FileText size={13} style={{ color: isActive ? '#f59e0b' : '#6b7280' }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{file.name}</p>
@@ -230,7 +230,7 @@ export default function Sidebar({
       <div className="border-t px-3 py-3" style={{ borderColor: 'var(--sidebar-active)' }}>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all duration-150 hover:bg-white/50"
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs transition-all duration-150 hover:bg-white/5"
           style={{ color: 'var(--text-secondary)' }}
         >
           <Settings size={13} />
@@ -258,12 +258,12 @@ export default function Sidebar({
                     if (e.key === 'Escape') setEditingName(false);
                   }}
                   className="flex-1 text-xs px-2 py-1.5 rounded-md border outline-none"
-                  style={{ borderColor: '#8b5cf6', background: 'white' }}
+                  style={{ borderColor: '#f59e0b', background: '#1a1a1a', color: 'var(--text-primary)' }}
                 />
                 <button
                   onClick={handleSaveName}
                   className="text-xs px-2 py-1 rounded-md text-white"
-                  style={{ background: '#8b5cf6' }}
+                  style={{ background: '#f59e0b' }}
                 >
                   Save
                 </button>
@@ -271,8 +271,8 @@ export default function Sidebar({
             ) : (
               <button
                 onClick={() => { setNameInput(chatbotName); setEditingName(true); }}
-                className="w-full text-left text-xs px-2 py-1.5 rounded-md border hover:border-purple-400 transition-colors"
-                style={{ borderColor: '#e5e7eb', background: 'white', color: '#5b21b6' }}
+                className="w-full text-left text-xs px-2 py-1.5 rounded-md border hover:border-amber-400 transition-colors"
+                style={{ borderColor: '#3a3a3a', background: '#1a1a1a', color: '#fbbf24' }}
               >
                 {chatbotName}
               </button>

@@ -42,10 +42,10 @@ export default function QueryBar({ value, onChange, onSubmit, isLoading, hasFile
       <div
         className="flex items-end gap-3 rounded-2xl px-4 py-3 transition-all"
         style={{
-          background: 'white',
+          background: '#1a1a1a',
           border: '1.5px solid',
-          borderColor: value ? '#c4b5fd' : '#e5e7eb',
-          boxShadow: value ? '0 0 0 3px #ede9fe' : '0 1px 3px rgba(0,0,0,0.06)',
+          borderColor: value ? '#f59e0b' : '#2a2a2a',
+          boxShadow: value ? '0 0 0 3px rgba(245,158,11,0.2)' : '0 1px 3px rgba(0,0,0,0.3)',
         }}
       >
         <textarea
@@ -63,7 +63,7 @@ export default function QueryBar({ value, onChange, onSubmit, isLoading, hasFile
           onClick={() => { if (value.trim() && !isLoading) onSubmit(); }}
           disabled={!value.trim() || isLoading || !hasFile}
           className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center transition-all disabled:opacity-30 hover:scale-105 active:scale-95"
-          style={{ background: value.trim() && hasFile ? '#7c3aed' : '#e5e7eb' }}
+          style={{ background: value.trim() && hasFile ? '#f59e0b' : '#2a2a2a' }}
         >
           {isLoading ? (
             <Loader2 size={14} className="text-white animate-spin" />

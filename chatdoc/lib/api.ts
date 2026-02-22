@@ -1,5 +1,5 @@
 /**
- * API client for the DocChat Flask backend.
+ * API client for the LexDoc Flask backend.
  *
  * Backend URL is configured via NEXT_PUBLIC_BACKEND_URL (set in .env.local
  * for dev, and in Vercel Environment Variables for production).

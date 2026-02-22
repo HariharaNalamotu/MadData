@@ -308,7 +308,7 @@ export default function Home() {
               className="flex-shrink-0 overflow-y-auto px-4 py-3"
               style={{
                 maxHeight: '260px',
-                background: 'white',
+                background: '#111111',
                 borderTop: '1px solid var(--border)',
               }}
             >
@@ -319,7 +319,7 @@ export default function Home() {
                     className="text-xs font-medium px-2 uppercase tracking-wider"
                     style={{ color: 'var(--text-muted)' }}
                   >
-                    Document Chat · BGE RAG
+                    Document Chat · LegalBERT RAG
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
                 </div>
@@ -339,8 +339,8 @@ export default function Home() {
                 ))}
                 {mainLoading && mainStatus && (
                   <div className="flex items-center gap-1.5 px-1 py-0.5">
-                    <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: '#8b5cf6' }} />
-                    <span className="text-xs font-medium" style={{ color: '#8b5cf6' }}>{mainStatus}</span>
+                    <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: '#f59e0b' }} />
+                    <span className="text-xs font-medium" style={{ color: '#f59e0b' }}>{mainStatus}</span>
                   </div>
                 )}
                 {mainLoading && mainMessages[mainMessages.length - 1]?.role === 'user' && (

@@ -1,5 +1,5 @@
 """
-DocChat Flask backend.
+LexDoc Flask backend.
 
 Routes:
   GET  /health                  — liveness probe
@@ -203,7 +203,7 @@ def chat():
                 intent = "direct"
 
             if intent == "rag" and doc_id:
-                yield "__STATUS__:BGE is retrieving...\n"
+                yield "__STATUS__:LegalBERT is retrieving...\n"
                 query_emb = encode(effective_query)[0]
                 hits = search_similar(query_emb, doc_id, top_k=5)
                 yield "__STATUS__:Qwen is thinking...\n"

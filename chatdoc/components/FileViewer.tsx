@@ -128,9 +128,9 @@ export default function FileViewer({
         <div className="text-center">
           <div
             className="w-20 h-20 rounded-3xl mx-auto mb-5 flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #ede9fe, #fce7f3)' }}
+            style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(236,72,153,0.2))' }}
           >
-            <FileText size={36} style={{ color: '#a78bfa' }} />
+            <FileText size={36} style={{ color: '#f59e0b' }} />
           </div>
           <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
             No document selected
@@ -150,13 +150,13 @@ export default function FileViewer({
       {/* File header */}
       <div
         className="flex-shrink-0 flex items-center gap-3 px-6 py-3.5"
-        style={{ borderBottom: '1px solid var(--border)', background: 'white' }}
+        style={{ borderBottom: '1px solid var(--border)', background: '#1a1a1a' }}
       >
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: '#ede9fe' }}
+          style={{ background: 'rgba(245,158,11,0.15)' }}
         >
-          <FileText size={15} style={{ color: '#7c3aed' }} />
+          <FileText size={15} style={{ color: '#f59e0b' }} />
         </div>
         <div>
           <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
@@ -174,7 +174,7 @@ export default function FileViewer({
                 key={hl.id}
                 onClick={() => onHighlightClick(hl.id)}
                 title={hl.selectedText.slice(0, 60)}
-                className="w-4 h-4 rounded-full border-2 border-white transition-transform hover:scale-125"
+                className="w-4 h-4 rounded-full border-2 border-black/30 transition-transform hover:scale-125"
                 style={{ background: HIGHLIGHT_COLORS[hl.colorKey].dot }}
               />
             ))}
@@ -185,7 +185,7 @@ export default function FileViewer({
       {/* Document content */}
       <div
         className="flex-1 overflow-y-auto"
-        style={{ background: '#f0f0f0', padding: '2rem 1.5rem' }}
+        style={{ background: '#0d0d0d', padding: '2rem 1.5rem' }}
       >
         <div
           ref={contentRef}

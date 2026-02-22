@@ -66,14 +66,14 @@ export default function SelectionPopup({
         /* ── Compact two-button pill ── */
         <div
           className="flex items-center gap-1 p-1 rounded-full shadow-lg"
-          style={{ background: 'white', border: '1px solid #ede9fe' }}
+          style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}
         >
           {/* Explain — primary action */}
           <button
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => { onExplain(); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-white transition-all hover:scale-105 active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)' }}
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}
           >
             <BookOpen size={11} />
             Explain
@@ -97,13 +97,13 @@ export default function SelectionPopup({
         /* ── Expanded ask card ── */
         <div
           className="rounded-2xl shadow-xl overflow-hidden"
-          style={{ width: 308, background: 'white', border: '1px solid #ede9fe' }}
+          style={{ width: 308, background: '#1a1a1a', border: '1px solid #2a2a2a' }}
         >
           {/* Selected text preview */}
           <div className="px-3 pt-3 pb-2">
             <div
               className="rounded-lg px-2.5 py-1.5 text-xs leading-relaxed"
-              style={{ background: '#fef9c3', color: '#713f12', border: '1px solid #fef08a' }}
+              style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)' }}
             >
               <span className="font-medium opacity-60">Selected: </span>
               {selectedText.length > 80 ? selectedText.slice(0, 80) + '…' : selectedText}
@@ -114,9 +114,9 @@ export default function SelectionPopup({
           <div className="px-3 pb-3">
             <div
               className="flex items-center gap-2 rounded-xl px-3 py-2"
-              style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd' }}
+              style={{ background: '#111111', border: '1.5px solid #3a3a3a' }}
             >
-              <Sparkles size={13} style={{ color: '#8b5cf6', flexShrink: 0 }} />
+              <Sparkles size={13} style={{ color: '#f59e0b', flexShrink: 0 }} />
               <input
                 ref={inputRef}
                 value={question}
@@ -124,13 +124,13 @@ export default function SelectionPopup({
                 onKeyDown={handleKeyDown}
                 placeholder={`Ask ${chatbotName} about this…`}
                 className="flex-1 text-xs bg-transparent outline-none placeholder:opacity-50"
-                style={{ color: '#1e1b4b' }}
+                style={{ color: 'var(--text-primary)' }}
               />
               <button
                 onClick={handleAskSubmit}
                 disabled={!question.trim()}
                 className="w-6 h-6 rounded-lg flex items-center justify-center transition-all disabled:opacity-30"
-                style={{ background: question.trim() ? '#8b5cf6' : '#e5e7eb' }}
+                style={{ background: question.trim() ? '#f59e0b' : '#2a2a2a' }}
               >
                 <Send size={10} className="text-white" />
               </button>

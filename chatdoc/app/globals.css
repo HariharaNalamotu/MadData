@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #faf9ff;
-  --bg-sidebar: #f0ecff;
-  --sidebar-hover: #e9e3ff;
-  --sidebar-active: #ddd6fe;
-  --accent: #7c3aed;
-  --accent-light: #a78bfa;
-  --accent-soft: #ede9fe;
-  --text-primary: #1e1b4b;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
-  --border: #e5e7eb;
-  --border-soft: #f3f4f6;
-  --user-bubble: #e0e7ff;
-  --ai-bubble: #f8fafc;
+  --bg-primary: #111111;
+  --bg-sidebar: #1a1a1a;
+  --sidebar-hover: #252525;
+  --sidebar-active: #2e2e2e;
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+  --accent-soft: rgba(245, 158, 11, 0.15);
+  --text-primary: #f9fafb;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --border: #2a2a2a;
+  --border-soft: #1f1f1f;
+  --user-bubble: #1e2d3d;
+  --ai-bubble: #1e1e1e;
 }
 
 * {
@@ -42,11 +42,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #ddd6fe;
+  background: #3a3a3a;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c4b5fd;
+  background: #4a4a4a;
 }
 
 /* Highlight pulse animation on creation */
@@ -101,7 +101,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #a78bfa;
+  background: #f59e0b;
   animation: typing-bounce 1.2s infinite;
 }
 .typing-dot:nth-child(2) { animation-delay: 0.15s; }
@@ -118,6 +118,6 @@ body {
   filter: brightness(0.93) saturate(1.2);
 }
 .doc-highlight.active-highlight {
-  outline: 2px solid #8b5cf6;
+  outline: 2px solid #f59e0b;
   outline-offset: 1px;
 }

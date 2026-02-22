@@ -4,7 +4,7 @@ Legal-BERT embeddings via HuggingFace InferenceClient.
 Model: BAAI/bge-base-en-v1.5
   - 768-dim sentence-transformer model, excellent for semantic similarity
   - Runs remotely on HF serverless infrastructure — zero local RAM
-  - Response shape: [batch, 768] (already pooled by BGE)
+  - Response shape: [batch, 768] (already pooled by LegalBERT)
 
 Large-document handling:
   - batch_size=32 keeps the number of HF API calls low (200 chunks → 7 calls)
@@ -90,7 +90,7 @@ def encode(
     batch_size: int = 32,
 ) -> List[List[float]]:
     """
-    Encode texts with BGE-base and return List[List[float]] of shape
+    Encode texts with LegalBERT and return List[List[float]] of shape
     [len(texts), EMBED_DIM].  JSON-safe and directly usable with Milvus.
 
     Args:
@@ -107,7 +107,7 @@ def encode(
 
     for batch_idx, i in enumerate(range(0, len(texts), batch_size)):
         batch = texts[i : i + batch_size]
-        # Rough char truncation (~5 chars/token) to stay within BGE's 512-token limit
+        # Rough char truncation (~5 chars/token) to stay within LegalBERT's 512-token limit
         batch = [t[: max_length * 5] for t in batch]
 
         arr = _encode_batch_with_retry(batch)
@@ -118,7 +118,7 @@ def encode(
                 all_embeddings.append(_maybe_normalize(arr[j].mean(axis=0), normalize))
         elif arr.ndim == 2:
             if arr.shape[0] == len(batch) and arr.shape[1] == EMBED_DIM:
-                # [batch, hidden] — already pooled (sentence-transformer style, expected for BGE)
+                # [batch, hidden] — already pooled (sentence-transformer style, expected for LegalBERT)
                 for j in range(arr.shape[0]):
                     all_embeddings.append(_maybe_normalize(arr[j], normalize))
             else:
@@ -137,4 +137,4 @@ def encode(
 
 def warmup() -> None:
     """No-op — no local model to warm up."""
-    logger.info("Encoder: BGE-base-en-v1.5 via HuggingFace InferenceClient (remote, batch_size=32).")
+    logger.info("Encoder: LegalBERT (BAAI/bge-base-en-v1.5) via HuggingFace InferenceClient (remote, batch_size=32).")

@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# DocChat backend — Flask + HuggingFace Inference API + Milvus + Anthropic
+# LexDoc backend — Flask + HuggingFace Inference API + Milvus + Anthropic
 #
 # No local ML model — embeddings are generated via the HF free serverless API.
 # This keeps the image tiny (~100 MB) and RAM usage well under 200 MB,

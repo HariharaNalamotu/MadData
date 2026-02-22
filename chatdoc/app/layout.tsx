@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DocChat — AI Document Analysis",
+  title: "LexDoc — AI Document Analysis",
   description: "Chat with your documents using AI",
 };
 
