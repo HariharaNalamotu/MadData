@@ -19,11 +19,11 @@ COPY . .
 
 EXPOSE 5000
 
-# Two sync workers are safe now — no heavy in-process model.
-# Increase --timeout for large PDF uploads (pypdf extraction can take a few seconds).
+# Single worker — prevents two processes racing to drop/recreate the Milvus
+# collection on startup and ensures atexit cleanup runs exactly once on shutdown.
 CMD ["gunicorn", \
      "--bind", "0.0.0.0:5000", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--timeout", "120", \
      "--worker-class", "sync", \
      "--access-logfile", "-", \

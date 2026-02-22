@@ -62,7 +62,7 @@ export function useStreamingChat(initialMessages: ChatMsg[] = []) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === asstMsg.id
-              ? { ...m, content: `Error: ${msg}. Check that the backend is running and OPENAI_API_KEY is set.` }
+              ? { ...m, content: `Error: ${msg}. Check that the backend is running.` }
               : m
           )
         );

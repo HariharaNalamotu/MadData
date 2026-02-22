@@ -11,6 +11,7 @@ Routes:
 
 from __future__ import annotations
 
+import atexit
 import io
 import logging
 import os
@@ -26,7 +27,7 @@ from pypdf import PdfReader
 from agent import classify_query, stream_direct_response, stream_explain_response, stream_rag_response
 from chunker import extract_chunks
 from encoder import encode, warmup
-from milvus_store import delete_document, ensure_collection, insert_chunks, search_similar
+from milvus_store import delete_document, reset_collection, insert_chunks, search_similar
 
 # ---------------------------------------------------------------------------
 # App setup
@@ -45,17 +46,26 @@ allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*")
 CORS(app, origins=allowed_origins)
 
 # ---------------------------------------------------------------------------
-# Startup initialization (runs before first request in gunicorn)
+# Startup / shutdown
 # ---------------------------------------------------------------------------
 
 def startup():
     logger.info("Initializing services…")
-    ensure_collection()
-    warmup()  # pre-loads Legal-BERT so first real request is fast
+    reset_collection()   # wipe any stale vectors from the previous run
+    warmup()
     logger.info("Startup complete.")
+
+def shutdown():
+    logger.info("Shutting down — wiping Milvus collection…")
+    try:
+        reset_collection()
+    except Exception:
+        logger.exception("Shutdown wipe failed (non-fatal).")
 
 with app.app_context():
     startup()
+
+atexit.register(shutdown)
 
 
 # ---------------------------------------------------------------------------
@@ -185,24 +195,27 @@ def chat():
     ]
 
     def generate():
-        if doc_id:
-            intent = classify_query(effective_query)
-        else:
-            intent = "direct"
-
-        if intent == "rag" and doc_id:
-            query_emb = encode(effective_query)[0]
-            hits = search_similar(query_emb, doc_id, top_k=5)
-            if hits:
-                yield from stream_rag_response(effective_query, hits, clean_history)
+        try:
+            if doc_id:
+                intent = classify_query(effective_query)
             else:
-                # No relevant chunks found — fall back to direct with a note
-                yield from stream_direct_response(
-                    effective_query + "\n\n(Note: no matching clauses found in the document.)",
-                    clean_history,
-                )
-        else:
-            yield from stream_direct_response(effective_query, clean_history)
+                intent = "direct"
+
+            if intent == "rag" and doc_id:
+                query_emb = encode(effective_query)[0]
+                hits = search_similar(query_emb, doc_id, top_k=5)
+                if hits:
+                    yield from stream_rag_response(effective_query, hits, clean_history)
+                else:
+                    yield from stream_direct_response(
+                        effective_query + "\n\n(Note: no matching clauses found in the document.)",
+                        clean_history,
+                    )
+            else:
+                yield from stream_direct_response(effective_query, clean_history)
+        except Exception as exc:
+            logger.exception("Chat streaming error")
+            yield f"\n\n[Error: {exc}]"
 
     return Response(
         stream_with_context(generate()),
@@ -229,7 +242,11 @@ def explain():
         return jsonify({"error": "'selected_text' is required"}), 400
 
     def generate():
-        yield from stream_explain_response(selected_text, doc_context)
+        try:
+            yield from stream_explain_response(selected_text, doc_context)
+        except Exception as exc:
+            logger.exception("Explain streaming error")
+            yield f"\n\n[Error: {exc}]"
 
     return Response(
         stream_with_context(generate()),
