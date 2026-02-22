@@ -24,7 +24,7 @@ export default function SidePanel({
   const colors = HIGHLIGHT_COLORS[highlight.colorKey];
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, setInput, send, isLoading } = useStreamingChat(
+  const { messages, input, setInput, send, isLoading, status } = useStreamingChat(
     highlight.messages
   );
 
@@ -34,6 +34,17 @@ export default function SidePanel({
 
   useEffect(() => {
     return () => { onSaveMessages(highlight.id, messagesRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-send pendingQuery on first mount (from "Ask" selection popup)
+  useEffect(() => {
+    if (highlight.pendingQuery) {
+      send(highlight.pendingQuery, {
+        docId: fileDocId,
+        selectedText: highlight.selectedText,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -145,7 +156,7 @@ export default function SidePanel({
               Ask about this selection
             </p>
             <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-              {chatbotName} will search the contract using Legal-BERT RAG for
+              {chatbotName} will search the contract using BGE RAG for
               specific questions, or answer general legal concepts directly.
             </p>
           </div>
@@ -153,7 +164,7 @@ export default function SidePanel({
 
         {messages.length === 0 && isExplainMode && (highlight.explanation || highlight.explainLoading) && (
           <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-            Follow-up questions below are answered using Legal-BERT RAG on your contract.
+            Follow-up questions below are answered using BGE RAG on your contract.
           </p>
         )}
 
@@ -171,6 +182,12 @@ export default function SidePanel({
             }
           />
         ))}
+        {isLoading && status && (
+          <div className="flex items-center gap-1.5 px-1 py-0.5">
+            <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: '#8b5cf6' }} />
+            <span className="text-xs font-medium" style={{ color: '#8b5cf6' }}>{status}</span>
+          </div>
+        )}
         {isLoading && messages[messages.length - 1]?.role === 'user' && (
           <ChatMessage role="assistant" content="" chatbotName={chatbotName} isStreaming />
         )}

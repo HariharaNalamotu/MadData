@@ -16,10 +16,13 @@ export interface SendOptions {
   selectedText?: string;
 }
 
+const STATUS_PREFIX = '__STATUS__:';
+
 export function useStreamingChat(initialMessages: ChatMsg[] = []) {
   const [messages, setMessages] = useState<ChatMsg[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
+  const [status, setStatus] = useState('');
   const messagesRef = useRef<ChatMsg[]>(initialMessages);
   messagesRef.current = messages;
 
@@ -34,6 +37,7 @@ export function useStreamingChat(initialMessages: ChatMsg[] = []) {
       setMessages([...prevMessages, userMsg, asstMsg]);
       setInput('');
       setIsLoading(true);
+      setStatus('');
 
       try {
         const history = prevMessages.map((m) => ({ role: m.role, content: m.content }));
@@ -47,11 +51,46 @@ export function useStreamingChat(initialMessages: ChatMsg[] = []) {
         const reader = stream.getReader();
         const decoder = new TextDecoder();
         let accumulated = '';
+        // Buffer for incomplete lines; status markers always appear before content
+        let lineBuffer = '';
+        let statusDone = false;
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          accumulated += decoder.decode(value, { stream: true });
+
+          lineBuffer += decoder.decode(value, { stream: true });
+
+          // Drain complete __STATUS__: lines from the front of the buffer
+          if (!statusDone) {
+            let nlIdx: number;
+            while ((nlIdx = lineBuffer.indexOf('\n')) !== -1) {
+              const line = lineBuffer.slice(0, nlIdx);
+              if (line.startsWith(STATUS_PREFIX)) {
+                setStatus(line.slice(STATUS_PREFIX.length).trim());
+                lineBuffer = lineBuffer.slice(nlIdx + 1);
+              } else {
+                // First non-status line — switch to content mode
+                statusDone = true;
+                break;
+              }
+            }
+          }
+
+          // Everything remaining in the buffer (after status lines) is content
+          if (statusDone && lineBuffer) {
+            accumulated += lineBuffer;
+            lineBuffer = '';
+            const snap = accumulated;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === asstMsg.id ? { ...m, content: snap } : m))
+            );
+          }
+        }
+
+        // Flush any remaining buffer as content
+        if (lineBuffer) {
+          accumulated += lineBuffer;
           const snap = accumulated;
           setMessages((prev) =>
             prev.map((m) => (m.id === asstMsg.id ? { ...m, content: snap } : m))
@@ -68,10 +107,11 @@ export function useStreamingChat(initialMessages: ChatMsg[] = []) {
         );
       } finally {
         setIsLoading(false);
+        setStatus('');
       }
     },
     [] // reads from refs, no stale closure issues
   );
 
-  return { messages, setMessages, input, setInput, send, isLoading };
+  return { messages, setMessages, input, setInput, send, isLoading, status };
 }

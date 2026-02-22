@@ -152,11 +152,45 @@ export default function Home() {
         const reader = stream.getReader();
         const decoder = new TextDecoder();
         let accumulated = '';
+        let lineBuffer = '';
+        let statusDone = false;
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          accumulated += decoder.decode(value, { stream: true });
+
+          lineBuffer += decoder.decode(value, { stream: true });
+
+          // Drain __STATUS__: lines from the front of the buffer before showing content
+          if (!statusDone) {
+            let nlIdx: number;
+            while ((nlIdx = lineBuffer.indexOf('\n')) !== -1) {
+              const line = lineBuffer.slice(0, nlIdx);
+              if (line.startsWith('__STATUS__:')) {
+                lineBuffer = lineBuffer.slice(nlIdx + 1);
+              } else {
+                statusDone = true;
+                break;
+              }
+            }
+          }
+
+          if (statusDone && lineBuffer) {
+            accumulated += lineBuffer;
+            lineBuffer = '';
+            const snap = accumulated;
+            setHighlights((prev) => ({
+              ...prev,
+              [file.id]: (prev[file.id] ?? []).map((h) =>
+                h.id === highlightId ? { ...h, explanation: snap, explainLoading: true } : h
+              ),
+            }));
+          }
+        }
+
+        // Flush remaining buffer
+        if (lineBuffer) {
+          accumulated += lineBuffer;
           const snap = accumulated;
           setHighlights((prev) => ({
             ...prev,
@@ -201,7 +235,6 @@ export default function Home() {
       setHighlightCounter((c) => c + 1);
 
       const highlightId = uuidv4();
-      const userMessage: ChatMsg = { id: uuidv4(), role: 'user', content: question };
 
       const newHighlight: HighlightSegment = {
         id: highlightId,
@@ -209,7 +242,8 @@ export default function Home() {
         selectedText: text,
         startIndex,
         endIndex,
-        messages: [userMessage],
+        messages: [],
+        pendingQuery: question,
         colorKey,
         createdAt: new Date(),
       };
@@ -305,7 +339,7 @@ export default function Home() {
                     className="text-xs font-medium px-2 uppercase tracking-wider"
                     style={{ color: 'var(--text-muted)' }}
                   >
-                    Document Chat · Legal-BERT RAG
+                    Document Chat · BGE RAG
                   </span>
                   <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
                 </div>

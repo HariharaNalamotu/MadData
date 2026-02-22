@@ -27,6 +27,8 @@ export interface HighlightSegment {
   explanation?: string;
   /** True while /explain is still streaming */
   explainLoading?: boolean;
+  /** If set, SidePanel auto-sends this question on first mount */
+  pendingQuery?: string;
 }
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────

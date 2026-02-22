@@ -197,13 +197,16 @@ def chat():
     def generate():
         try:
             if doc_id:
+                yield "__STATUS__:Routing query...\n"
                 intent = classify_query(effective_query)
             else:
                 intent = "direct"
 
             if intent == "rag" and doc_id:
+                yield "__STATUS__:BGE is retrieving...\n"
                 query_emb = encode(effective_query)[0]
                 hits = search_similar(query_emb, doc_id, top_k=5)
+                yield "__STATUS__:Qwen is thinking...\n"
                 if hits:
                     yield from stream_rag_response(effective_query, hits, clean_history)
                 else:
@@ -212,6 +215,7 @@ def chat():
                         clean_history,
                     )
             else:
+                yield "__STATUS__:Qwen is thinking...\n"
                 yield from stream_direct_response(effective_query, clean_history)
         except Exception as exc:
             logger.exception("Chat streaming error")
@@ -243,6 +247,7 @@ def explain():
 
     def generate():
         try:
+            yield "__STATUS__:Qwen is thinking...\n"
             yield from stream_explain_response(selected_text, doc_context)
         except Exception as exc:
             logger.exception("Explain streaming error")

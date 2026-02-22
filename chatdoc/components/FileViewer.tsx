@@ -183,17 +183,26 @@ export default function FileViewer({
       </div>
 
       {/* Document content */}
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{ background: '#f0f0f0', padding: '2rem 1.5rem' }}
+      >
         <div
           ref={contentRef}
           onMouseUp={handleMouseUp}
           onMouseDown={handleMouseDown}
-          className="max-w-3xl mx-auto select-text"
+          className="max-w-2xl mx-auto select-text"
           style={{
-            fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
-            fontSize: '0.875rem',
-            lineHeight: '1.8',
-            color: '#374151',
+            background: 'white',
+            border: '1px solid #d1d5db',
+            borderRadius: '3px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
+            padding: '3.5rem 4rem',
+            fontFamily: "Georgia, 'Times New Roman', serif",
+            fontSize: '0.9375rem',
+            lineHeight: '1.85',
+            color: '#1f2937',
+            textAlign: 'justify',
             whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
