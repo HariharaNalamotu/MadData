@@ -29,16 +29,8 @@ def get_client() -> MilvusClient:
     return _client
 
 
-def ensure_collection() -> None:
-    """Create the collection + index if it does not already exist."""
-    client = get_client()
-
-    if client.has_collection(COLLECTION):
-        logger.info("Collection '%s' already exists.", COLLECTION)
-        return
-
-    logger.info("Creating collection '%s'.", COLLECTION)
-
+def _create_collection(client: MilvusClient) -> None:
+    """Internal: create the collection schema and index from scratch."""
     schema = client.create_schema(auto_id=True, enable_dynamic_field=False)
     schema.add_field("id",          DataType.INT64,        is_primary=True)
     schema.add_field("doc_id",      DataType.VARCHAR,      max_length=64)
@@ -60,6 +52,28 @@ def ensure_collection() -> None:
         index_params=index_params,
     )
     logger.info("Collection '%s' created.", COLLECTION)
+
+
+def reset_collection() -> None:
+    """Drop the collection (if it exists) and recreate it empty.
+
+    Called on startup and on shutdown so the DB is always wiped clean
+    at both ends of the server's lifetime.
+    """
+    client = get_client()
+    if client.has_collection(COLLECTION):
+        client.drop_collection(COLLECTION)
+        logger.info("Collection '%s' dropped.", COLLECTION)
+    _create_collection(client)
+
+
+def ensure_collection() -> None:
+    """Create the collection + index if it does not already exist."""
+    client = get_client()
+    if client.has_collection(COLLECTION):
+        logger.info("Collection '%s' already exists.", COLLECTION)
+        return
+    _create_collection(client)
 
 
 def insert_chunks(doc_id: str, chunks: List[dict], embeddings: List[List[float]]) -> int:
