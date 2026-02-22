@@ -62,6 +62,11 @@ with app.app_context():
 # Routes
 # ---------------------------------------------------------------------------
 
+@app.route("/", methods=["GET", "HEAD"])
+def root():
+    return jsonify({"status": "ok"}), 200
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"}), 200
@@ -116,7 +121,11 @@ def upload_document():
 
     # ---- Encode (batched) ----------------------------------------------------
     chunk_texts = [c["text"] for c in chunks]
-    embeddings = encode(chunk_texts)
+    try:
+        embeddings = encode(chunk_texts)
+    except Exception as exc:
+        logger.exception("Embedding failed for '%s'", filename)
+        return jsonify({"error": f"Embedding service error: {exc}"}), 503
 
     # ---- Store in Milvus -----------------------------------------------------
     doc_id = str(uuid.uuid4())
