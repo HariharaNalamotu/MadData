@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 EMBED_DIM = 768
 _MODEL = "BAAI/bge-base-en-v1.5"
-_HF_API_URL = f"https://api-inference.huggingface.co/models/{_MODEL}"
+_HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{_MODEL}"
 
 
 def _headers() -> dict:
