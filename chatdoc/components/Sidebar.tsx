@@ -141,7 +141,7 @@ export default function Sidebar({
             {uploading ? 'Processing…' : dragOver ? 'Drop to upload' : 'Add a document'}
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {uploading ? 'Chunking & encoding with Legal-BERT' : 'PDF or TXT — drag or click'}
+            {uploading ? 'Chunking & encoding with BGE…' : 'PDF or TXT — drag or click'}
           </p>
           <input
             ref={fileInputRef}

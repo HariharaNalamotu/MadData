@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import Sidebar from '@/components/Sidebar';
 import FileViewer from '@/components/FileViewer';
@@ -50,6 +51,7 @@ export default function Home() {
     setInput: setMainInput,
     send: sendMain,
     isLoading: mainLoading,
+    status: mainStatus,
   } = useStreamingChat([]);
 
   // Auto-scroll main chat
@@ -151,54 +153,32 @@ export default function Home() {
         const stream = await explainStream({ selectedText: text, docContext });
         const reader = stream.getReader();
         const decoder = new TextDecoder();
-        let accumulated = '';
-        let lineBuffer = '';
-        let statusDone = false;
+        let raw = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          lineBuffer += decoder.decode(value, { stream: true });
-
-          // Drain __STATUS__: lines from the front of the buffer before showing content
-          if (!statusDone) {
-            let nlIdx: number;
-            while ((nlIdx = lineBuffer.indexOf('\n')) !== -1) {
-              const line = lineBuffer.slice(0, nlIdx);
-              if (line.startsWith('__STATUS__:')) {
-                lineBuffer = lineBuffer.slice(nlIdx + 1);
-              } else {
-                statusDone = true;
-                break;
-              }
-            }
-          }
-
-          if (statusDone && lineBuffer) {
-            accumulated += lineBuffer;
-            lineBuffer = '';
-            const snap = accumulated;
+          raw += decoder.decode(value, { stream: true });
+          const display = raw.replace(/^__STATUS__:[^\n]*\n/gm, '');
+          if (display) {
             setHighlights((prev) => ({
               ...prev,
               [file.id]: (prev[file.id] ?? []).map((h) =>
-                h.id === highlightId ? { ...h, explanation: snap, explainLoading: true } : h
+                h.id === highlightId ? { ...h, explanation: display, explainLoading: true } : h
               ),
             }));
           }
         }
 
-        // Flush remaining buffer
-        if (lineBuffer) {
-          accumulated += lineBuffer;
-          const snap = accumulated;
-          setHighlights((prev) => ({
-            ...prev,
-            [file.id]: (prev[file.id] ?? []).map((h) =>
-              h.id === highlightId ? { ...h, explanation: snap, explainLoading: true } : h
-            ),
-          }));
-        }
+        // Final flush (handles no trailing newline)
+        const display = raw.replace(/^__STATUS__:[^\n]*\n/gm, '');
+        setHighlights((prev) => ({
+          ...prev,
+          [file.id]: (prev[file.id] ?? []).map((h) =>
+            h.id === highlightId ? { ...h, explanation: display, explainLoading: true } : h
+          ),
+        }));
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
         setHighlights((prev) => ({
@@ -357,6 +337,12 @@ export default function Home() {
                     }
                   />
                 ))}
+                {mainLoading && mainStatus && (
+                  <div className="flex items-center gap-1.5 px-1 py-0.5">
+                    <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: '#8b5cf6' }} />
+                    <span className="text-xs font-medium" style={{ color: '#8b5cf6' }}>{mainStatus}</span>
+                  </div>
+                )}
                 {mainLoading && mainMessages[mainMessages.length - 1]?.role === 'user' && (
                   <ChatMessage
                     role="assistant"

@@ -16,8 +16,6 @@ export interface SendOptions {
   selectedText?: string;
 }
 
-const STATUS_PREFIX = '__STATUS__:';
-
 export function useStreamingChat(initialMessages: ChatMsg[] = []) {
   const [messages, setMessages] = useState<ChatMsg[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,52 +48,35 @@ export function useStreamingChat(initialMessages: ChatMsg[] = []) {
 
         const reader = stream.getReader();
         const decoder = new TextDecoder();
-        let accumulated = '';
-        // Buffer for incomplete lines; status markers always appear before content
-        let lineBuffer = '';
-        let statusDone = false;
+        // Accumulate the full raw text (including __STATUS__: lines)
+        let raw = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          lineBuffer += decoder.decode(value, { stream: true });
+          raw += decoder.decode(value, { stream: true });
 
-          // Drain complete __STATUS__: lines from the front of the buffer
-          if (!statusDone) {
-            let nlIdx: number;
-            while ((nlIdx = lineBuffer.indexOf('\n')) !== -1) {
-              const line = lineBuffer.slice(0, nlIdx);
-              if (line.startsWith(STATUS_PREFIX)) {
-                setStatus(line.slice(STATUS_PREFIX.length).trim());
-                lineBuffer = lineBuffer.slice(nlIdx + 1);
-              } else {
-                // First non-status line — switch to content mode
-                statusDone = true;
-                break;
-              }
-            }
+          // Show the most recent status line in the indicator
+          const statusHits = [...raw.matchAll(/^__STATUS__:([^\n]*)/gm)];
+          if (statusHits.length > 0) {
+            setStatus(statusHits[statusHits.length - 1][1].trim());
           }
 
-          // Everything remaining in the buffer (after status lines) is content
-          if (statusDone && lineBuffer) {
-            accumulated += lineBuffer;
-            lineBuffer = '';
-            const snap = accumulated;
+          // Strip all __STATUS__: lines and display the rest immediately
+          const display = raw.replace(/^__STATUS__:[^\n]*\n/gm, '');
+          if (display) {
             setMessages((prev) =>
-              prev.map((m) => (m.id === asstMsg.id ? { ...m, content: snap } : m))
+              prev.map((m) => (m.id === asstMsg.id ? { ...m, content: display } : m))
             );
           }
         }
 
-        // Flush any remaining buffer as content
-        if (lineBuffer) {
-          accumulated += lineBuffer;
-          const snap = accumulated;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === asstMsg.id ? { ...m, content: snap } : m))
-          );
-        }
+        // Final pass — handles trailing content with no newline
+        const display = raw.replace(/^__STATUS__:[^\n]*\n/gm, '');
+        setMessages((prev) =>
+          prev.map((m) => (m.id === asstMsg.id ? { ...m, content: display } : m))
+        );
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
         setMessages((prev) =>
