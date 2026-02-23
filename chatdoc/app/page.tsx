@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import Sidebar from '@/components/Sidebar';
-import FileViewer from '@/components/FileViewer';
+// FileViewer uses react-pdf / pdfjs-dist which calls new DOMMatrix() at module
+// evaluation time — a browser-only API.  Importing it with ssr:false prevents
+// Next.js from evaluating it during server-side pre-rendering.
+const FileViewer = dynamic(() => import('@/components/FileViewer'), { ssr: false });
 import QueryBar from '@/components/QueryBar';
 import SidePanel from '@/components/SidePanel';
 import ChatMessage from '@/components/ChatMessage';
