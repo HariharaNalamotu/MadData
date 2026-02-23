@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu, MessageSquare, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import Sidebar from '@/components/Sidebar';
 // FileViewer uses react-pdf / pdfjs-dist which calls new DOMMatrix() at module
@@ -33,12 +33,16 @@ export default function Home() {
   const [chatbotName, setChatbotName] = useState('LexDoc');
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const [highlightCounter, setHighlightCounter] = useState(0);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Refs for use inside callbacks without stale closures
   const selectedFileRef = useRef<FileItem | null>(null);
   const chatbotNameRef = useRef(chatbotName);
   const highlightCounterRef = useRef(highlightCounter);
+  const isMobileRef = useRef(false);
   chatbotNameRef.current = chatbotName;
   highlightCounterRef.current = highlightCounter;
 
@@ -67,6 +71,18 @@ export default function Home() {
   // Keep messages ref always current (used in file-switch effect below)
   mainMessagesRef.current = mainMessages;
 
+  // Detect mobile viewport
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const check = () => {
+      setIsMobile(mq.matches);
+      isMobileRef.current = mq.matches;
+    };
+    check();
+    mq.addEventListener('change', check);
+    return () => mq.removeEventListener('change', check);
+  }, []);
+
   // Save/restore per-file chat history when the active document changes
   useEffect(() => {
     const prevId = prevFileIdRef.current;
@@ -83,12 +99,16 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mainMessages]);
 
-  // Escape → close side panel
+  // Escape → close panels
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && sidePanelOpen) {
-        setSidePanelOpen(false);
-        setActiveHighlightId(null);
+      if (e.key === 'Escape') {
+        if (sidePanelOpen) {
+          setSidePanelOpen(false);
+          setActiveHighlightId(null);
+        }
+        setMobileChatOpen(false);
+        setMobileSidebarOpen(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -103,6 +123,7 @@ export default function Home() {
     setHighlights((prev) => ({ ...prev, [file.id]: [] }));
     setSidePanelOpen(false);
     setActiveHighlightId(null);
+    setMobileSidebarOpen(false);
   }, []);
 
   const handleFileRemove = useCallback((id: string) => {
@@ -133,6 +154,7 @@ export default function Home() {
     setSidePanelOpen(false);
     setActiveHighlightId(null);
     setSelection(null);
+    setMobileSidebarOpen(false);
   }, []);
 
   // ── Selection: Explain (auto-trigger via /explain) ─────────────────────────
@@ -291,12 +313,21 @@ export default function Home() {
       docId:    selectedFileRef.current?.docId,
       fullText: selectedFileRef.current?.content,
     });
+    if (isMobileRef.current) setMobileChatOpen(true);
   }, [mainInput, mainLoading, sendMain]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
+      {/* Mobile sidebar backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar
         files={files}
         selectedFileId={selectedFileId}
@@ -305,50 +336,180 @@ export default function Home() {
         onFileUpload={handleFileUpload}
         onFileRemove={handleFileRemove}
         onChatbotNameChange={setChatbotName}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left column */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile top bar */}
         <div
-          className="flex flex-col overflow-hidden"
-          style={{
-            flex: sidePanelOpen ? '0 0 50%' : '1 1 auto',
-            transition: 'flex 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-          }}
+          className="flex-shrink-0 flex items-center gap-3 px-4 py-3 md:hidden"
+          style={{ borderBottom: '1px solid var(--border)', background: '#1a1a1a' }}
         >
-          <FileViewer
-            file={selectedFile}
-            highlights={fileHighlights}
-            activeHighlightId={activeHighlightId}
-            selection={selection}
-            chatbotName={chatbotName}
-            onSelectionChange={setSelection}
-            onExplainSelection={handleExplainSelection}
-            onAskAboutSelection={handleAskAboutSelection}
-            onHighlightClick={handleHighlightClick}
-          />
-
-          {/* Document-level conversation */}
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
+          >
+            <Menu size={18} style={{ color: 'var(--text-secondary)' }} />
+          </button>
+          <span
+            className="flex-1 text-sm font-medium truncate"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {selectedFile?.name ?? 'LexDoc'}
+          </span>
           {mainMessages.length > 0 && (
-            <div
-              className="flex-shrink-0 overflow-y-auto px-4 py-3"
-              style={{
-                maxHeight: '260px',
-                background: '#111111',
-                borderTop: '1px solid var(--border)',
-              }}
+            <button
+              onClick={() => setMobileChatOpen(true)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
             >
-              <div className="max-w-3xl mx-auto space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
-                  <span
-                    className="text-xs font-medium px-2 uppercase tracking-wider"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    Document Chat · LegalBERT RAG
-                  </span>
-                  <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+              <MessageSquare size={16} style={{ color: '#f59e0b' }} />
+            </button>
+          )}
+        </div>
+
+        {/* Main content row */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left column */}
+          <div
+            className="flex flex-col overflow-hidden"
+            style={{
+              flex: (sidePanelOpen && !isMobile) ? '0 0 50%' : '1 1 auto',
+              transition: 'flex 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <FileViewer
+              file={selectedFile}
+              highlights={fileHighlights}
+              activeHighlightId={activeHighlightId}
+              selection={selection}
+              chatbotName={chatbotName}
+              onSelectionChange={setSelection}
+              onExplainSelection={handleExplainSelection}
+              onAskAboutSelection={handleAskAboutSelection}
+              onHighlightClick={handleHighlightClick}
+            />
+
+            {/* Document-level conversation (desktop only — mobile uses overlay) */}
+            {!isMobile && mainMessages.length > 0 && (
+              <div
+                className="flex-shrink-0 overflow-y-auto px-4 py-3"
+                style={{
+                  maxHeight: '260px',
+                  background: '#111111',
+                  borderTop: '1px solid var(--border)',
+                }}
+              >
+                <div className="max-w-3xl mx-auto space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+                    <span
+                      className="text-xs font-medium px-2 uppercase tracking-wider"
+                      style={{ color: 'var(--text-muted)' }}
+                    >
+                      Document Chat · LegalBERT RAG
+                    </span>
+                    <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+                  </div>
+                  {mainMessages.map((msg, i) => (
+                    <ChatMessage
+                      key={msg.id}
+                      role={msg.role}
+                      content={msg.content}
+                      chatbotName={chatbotName}
+                      isStreaming={
+                        mainLoading &&
+                        i === mainMessages.length - 1 &&
+                        msg.role === 'assistant' &&
+                        !msg.content
+                      }
+                    />
+                  ))}
+                  {mainLoading && mainStatus && (
+                    <div className="flex items-center gap-1.5 px-1 py-0.5">
+                      <Loader2 size={11} className="animate-spin flex-shrink-0" style={{ color: '#f59e0b' }} />
+                      <span className="text-xs font-medium" style={{ color: '#f59e0b' }}>{mainStatus}</span>
+                    </div>
+                  )}
+                  {mainLoading && mainMessages[mainMessages.length - 1]?.role === 'user' && (
+                    <ChatMessage
+                      role="assistant"
+                      content=""
+                      chatbotName={chatbotName}
+                      isStreaming
+                    />
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
+              </div>
+            )}
+
+            <QueryBar
+              value={mainInput}
+              onChange={setMainInput}
+              onSubmit={handleMainQuerySubmit}
+              isLoading={mainLoading}
+              hasFile={!!selectedFile}
+              chatbotName={chatbotName}
+            />
+          </div>
+
+          {/* Right column: side panel
+              On mobile: fixed full-screen overlay (z-40)
+              On desktop: inline half-width panel */}
+          {sidePanelOpen && activeHighlight && (
+            <div
+              className="fixed inset-0 z-40 overflow-hidden md:relative md:inset-auto md:z-auto"
+              style={{ flex: '0 0 50%', maxWidth: '50%' }}
+            >
+              <SidePanel
+                key={activeHighlight.id}
+                highlight={activeHighlight}
+                fileDocId={selectedFile?.docId ?? ''}
+                fileContent={selectedFile?.content ?? ''}
+                chatbotName={chatbotName}
+                onClose={() => {
+                  setSidePanelOpen(false);
+                  setActiveHighlightId(null);
+                }}
+                onSaveMessages={handleSaveMessages}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Mobile document chat overlay */}
+        {isMobile && mobileChatOpen && (
+          <div
+            className="fixed inset-0 z-30 flex flex-col"
+            style={{ background: 'var(--bg-primary)' }}
+          >
+            {/* Header */}
+            <div
+              className="flex-shrink-0 flex items-center gap-3 px-4 py-3"
+              style={{ borderBottom: '1px solid var(--border)', background: '#1a1a1a' }}
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+                <span
+                  className="text-xs font-medium px-2 uppercase tracking-wider"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  Document Chat · LegalBERT RAG
+                </span>
+                <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+              </div>
+              <button
+                onClick={() => setMobileChatOpen(false)}
+                className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
+              >
+                <X size={16} style={{ color: 'var(--text-muted)' }} />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-3">
+              <div className="max-w-3xl mx-auto space-y-3">
                 {mainMessages.map((msg, i) => (
                   <ChatMessage
                     key={msg.id}
@@ -370,45 +531,20 @@ export default function Home() {
                   </div>
                 )}
                 {mainLoading && mainMessages[mainMessages.length - 1]?.role === 'user' && (
-                  <ChatMessage
-                    role="assistant"
-                    content=""
-                    chatbotName={chatbotName}
-                    isStreaming
-                  />
+                  <ChatMessage role="assistant" content="" chatbotName={chatbotName} isStreaming />
                 )}
                 <div ref={messagesEndRef} />
               </div>
             </div>
-          )}
 
-          <QueryBar
-            value={mainInput}
-            onChange={setMainInput}
-            onSubmit={handleMainQuerySubmit}
-            isLoading={mainLoading}
-            hasFile={!!selectedFile}
-            chatbotName={chatbotName}
-          />
-        </div>
-
-        {/* Right column: side panel */}
-        {sidePanelOpen && activeHighlight && (
-          <div
-            className="overflow-hidden"
-            style={{ flex: '0 0 50%', maxWidth: '50%' }}
-          >
-            <SidePanel
-              key={activeHighlight.id}
-              highlight={activeHighlight}
-              fileDocId={selectedFile?.docId ?? ''}
-              fileContent={selectedFile?.content ?? ''}
+            {/* Query bar */}
+            <QueryBar
+              value={mainInput}
+              onChange={setMainInput}
+              onSubmit={handleMainQuerySubmit}
+              isLoading={mainLoading}
+              hasFile={!!selectedFile}
               chatbotName={chatbotName}
-              onClose={() => {
-                setSidePanelOpen(false);
-                setActiveHighlightId(null);
-              }}
-              onSaveMessages={handleSaveMessages}
             />
           </div>
         )}

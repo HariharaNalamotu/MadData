@@ -24,6 +24,8 @@ interface SidebarProps {
   onFileUpload: (file: FileItem) => void;
   onFileRemove: (id: string) => void;
   onChatbotNameChange: (name: string) => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
 export default function Sidebar({
@@ -34,6 +36,8 @@ export default function Sidebar({
   onFileUpload,
   onFileRemove,
   onChatbotNameChange,
+  mobileOpen,
+  onMobileClose,
 }: SidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -93,8 +97,12 @@ export default function Sidebar({
 
   return (
     <aside
+      className={
+        mobileOpen
+          ? 'fixed inset-0 z-50 flex flex-col'
+          : 'hidden md:flex md:w-64 md:flex-shrink-0 flex-col h-full'
+      }
       style={{ background: 'var(--bg-sidebar)', borderRight: '1px solid var(--sidebar-active)' }}
-      className="w-64 flex-shrink-0 flex flex-col h-full"
     >
       {/* Header */}
       <div className="px-4 py-5 border-b" style={{ borderColor: 'var(--sidebar-active)' }}>
@@ -108,6 +116,14 @@ export default function Sidebar({
           <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
             LexDoc
           </span>
+          {mobileOpen && (
+            <button
+              onClick={onMobileClose}
+              className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors"
+            >
+              <X size={16} style={{ color: 'var(--text-muted)' }} />
+            </button>
+          )}
         </div>
         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
           AI Legal Document Analysis
