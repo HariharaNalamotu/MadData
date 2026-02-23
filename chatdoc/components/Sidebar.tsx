@@ -53,6 +53,7 @@ export default function Sidebar({
         docId: result.doc_id,
         name: file.name,
         content: result.full_text,
+        fileUrl: URL.createObjectURL(file),
         type: file.type || 'application/octet-stream',
         size: file.size,
         uploadedAt: new Date(),

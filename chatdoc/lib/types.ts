@@ -4,7 +4,8 @@ export interface FileItem {
   id: string;            // local UI identifier
   docId: string;         // Milvus document ID returned by backend
   name: string;
-  content: string;       // full extracted text (for display + selection indexing)
+  content: string;       // full extracted text (for context + fallback display)
+  fileUrl?: string;      // blob URL for PDF viewer (created via URL.createObjectURL)
   type: string;
   size: number;
   uploadedAt: Date;

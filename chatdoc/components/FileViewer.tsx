@@ -1,9 +1,15 @@
 'use client';
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { FileText } from 'lucide-react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
 import { FileItem, HighlightSegment, HIGHLIGHT_COLORS } from '@/lib/types';
 import SelectionPopup from './SelectionPopup';
+
+// Configure PDF.js worker via CDN — works in Next.js without webpack config
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface SelectionState {
   text: string;
@@ -25,48 +31,24 @@ interface FileViewerProps {
   onHighlightClick: (id: string) => void;
 }
 
-// Compute character offset from a DOM node + offset within the container
-function getTextOffset(container: Element, node: Node, offset: number): number {
-  let total = 0;
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-  let current: Node | null = walker.nextNode();
-  while (current) {
-    if (current === node) return total + offset;
-    total += current.textContent?.length ?? 0;
-    current = walker.nextNode();
-  }
-  return total;
-}
+/**
+ * Find the position of selected PDF text within the extracted full text.
+ * The PDF text layer and pypdf's extraction are close but not always identical
+ * (spacing differences, ligatures), so we try progressively looser matches.
+ */
+function findTextPosition(content: string, selected: string): { start: number; end: number } {
+  // 1. Exact match
+  const idx = content.indexOf(selected);
+  if (idx !== -1) return { start: idx, end: idx + selected.length };
 
-// Build an array of text segments with highlight metadata
-function buildSegments(
-  text: string,
-  highlights: HighlightSegment[],
-  activeId: string | null
-): Array<{ text: string; highlight: HighlightSegment | null }> {
-  if (!highlights.length) return [{ text, highlight: null }];
+  // 2. Normalise internal whitespace and try again
+  const norm = selected.replace(/\s+/g, ' ').trim();
+  const normContent = content.replace(/\s+/g, ' ');
+  const idx2 = normContent.indexOf(norm);
+  if (idx2 !== -1) return { start: idx2, end: idx2 + norm.length };
 
-  const sorted = [...highlights].sort((a, b) => a.startIndex - b.startIndex);
-  const segments: Array<{ text: string; highlight: HighlightSegment | null }> = [];
-  let cursor = 0;
-
-  for (const hl of sorted) {
-    const start = Math.max(hl.startIndex, cursor);
-    const end = Math.min(hl.endIndex, text.length);
-    if (start > cursor) {
-      segments.push({ text: text.slice(cursor, start), highlight: null });
-    }
-    if (end > start) {
-      segments.push({ text: text.slice(start, end), highlight: hl });
-    }
-    cursor = Math.max(cursor, end);
-  }
-
-  if (cursor < text.length) {
-    segments.push({ text: text.slice(cursor), highlight: null });
-  }
-
-  return segments;
+  // 3. Fallback — position unknown, still allow explain / ask to work
+  return { start: 0, end: selected.length };
 }
 
 export default function FileViewer({
@@ -80,47 +62,56 @@ export default function FileViewer({
   onAskAboutSelection,
   onHighlightClick,
 }: FileViewerProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
+  const [numPages, setNumPages] = useState(0);
+  const [pageWidth, setPageWidth] = useState(760);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Keep PDF page width in sync with the scroll container width
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      setPageWidth(Math.max(320, Math.min(w - 64, 880)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const handleMouseUp = useCallback(() => {
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-      return;
-    }
-    if (!contentRef.current) return;
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) return;
+    if (!containerRef.current) return;
 
-    const selectedText = sel.toString();
     const range = sel.getRangeAt(0);
+    if (!containerRef.current.contains(range.commonAncestorContainer)) return;
 
-    // Check selection is within our content div
-    if (!contentRef.current.contains(range.commonAncestorContainer)) {
-      return;
-    }
+    const selectedText = sel.toString().trim();
+    if (!selectedText || !file) return;
 
-    const startIndex = getTextOffset(contentRef.current, range.startContainer, range.startOffset);
-    const endIndex = getTextOffset(contentRef.current, range.endContainer, range.endOffset);
-
-    // Get popup position from selection rect
+    const { start, end } = findTextPosition(file.content, selectedText);
     const rect = range.getBoundingClientRect();
+
     onSelectionChange({
       text: selectedText,
       x: rect.left + rect.width / 2 - 80,
       y: rect.top,
-      startIndex,
-      endIndex,
+      startIndex: start,
+      endIndex: end,
     });
-  }, [onSelectionChange]);
+  }, [file, onSelectionChange]);
 
-  // Clear selection when clicking outside popup
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Only clear if not clicking on popup
       const target = e.target as HTMLElement;
       if (target.closest('[data-popup]')) return;
       onSelectionChange(null);
     },
     [onSelectionChange]
   );
+
+  // ── Empty state ──────────────────────────────────────────────────────────────
 
   if (!file) {
     return (
@@ -136,17 +127,24 @@ export default function FileViewer({
             No document selected
           </h2>
           <p className="text-sm max-w-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-            Upload a legal document (PDF or text) to get started. Clauses are automatically identified, encoded with Legal-BERT, and indexed for smart retrieval.
+            Upload a legal document (PDF or text) to get started. Clauses are
+            automatically identified, encoded with Legal-BERT, and indexed for
+            smart retrieval.
           </p>
         </div>
       </div>
     );
   }
 
-  const segments = buildSegments(file.content, highlights, activeHighlightId);
+  const isPdf =
+    !!file.fileUrl &&
+    (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
+
       {/* File header */}
       <div
         className="flex-shrink-0 flex items-center gap-3 px-6 py-3.5"
@@ -163,8 +161,9 @@ export default function FileViewer({
             {file.name}
           </p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {file.content.length.toLocaleString()} characters
-            {highlights.length > 0 && ` · ${highlights.length} annotation${highlights.length !== 1 ? 's' : ''}`}
+            {isPdf ? `${numPages} page${numPages !== 1 ? 's' : ''}` : `${file.content.length.toLocaleString()} characters`}
+            {highlights.length > 0 &&
+              ` · ${highlights.length} annotation${highlights.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         {highlights.length > 0 && (
@@ -184,51 +183,65 @@ export default function FileViewer({
 
       {/* Document content */}
       <div
+        ref={scrollRef}
         className="flex-1 overflow-y-auto"
-        style={{ background: '#0d0d0d', padding: '2rem 1.5rem' }}
+        style={{ background: '#0d0d0d' }}
+        onMouseUp={handleMouseUp}
+        onMouseDown={handleMouseDown}
       >
-        <div
-          ref={contentRef}
-          onMouseUp={handleMouseUp}
-          onMouseDown={handleMouseDown}
-          className="max-w-2xl mx-auto select-text"
-          style={{
-            background: 'white',
-            border: '1px solid #d1d5db',
-            borderRadius: '3px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
-            padding: '3.5rem 4rem',
-            fontFamily: "Georgia, 'Times New Roman', serif",
-            fontSize: '0.9375rem',
-            lineHeight: '1.85',
-            color: '#1f2937',
-            textAlign: 'justify',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}
-        >
-          {segments.map((seg, i) => {
-            if (!seg.highlight) {
-              return <span key={i}>{seg.text}</span>;
-            }
-            const hl = seg.highlight;
-            const colors = HIGHLIGHT_COLORS[hl.colorKey];
-            const isActive = hl.id === activeHighlightId;
-            return (
-              <span
-                key={i}
-                className={`doc-highlight ${isActive ? 'active-highlight' : ''}`}
-                onClick={() => onHighlightClick(hl.id)}
-                style={{
-                  background: colors.bg,
-                  borderBottom: `2px solid ${colors.border}`,
-                }}
-                title={`Click to open conversation (${hl.messages.length} message${hl.messages.length !== 1 ? 's' : ''})`}
-              >
-                {seg.text}
-              </span>
-            );
-          })}
+        <div ref={containerRef} className="py-8 px-8">
+          {isPdf ? (
+            <Document
+              file={file.fileUrl}
+              onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+              className="flex flex-col items-center gap-6"
+              loading={
+                <div className="flex items-center gap-2 py-16" style={{ color: 'var(--text-muted)' }}>
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="text-sm ml-1">Loading PDF…</span>
+                </div>
+              }
+              error={
+                <p className="text-sm py-16 text-center" style={{ color: '#ef4444' }}>
+                  Failed to load PDF. Try re-uploading the file.
+                </p>
+              }
+            >
+              {Array.from({ length: numPages }, (_, i) => (
+                <Page
+                  key={i + 1}
+                  pageNumber={i + 1}
+                  width={pageWidth}
+                  renderTextLayer
+                  renderAnnotationLayer={false}
+                  className="shadow-2xl"
+                />
+              ))}
+            </Document>
+          ) : (
+            /* Plain-text fallback for .txt / .md / .csv etc. */
+            <div
+              className="max-w-2xl mx-auto select-text"
+              style={{
+                background: 'white',
+                border: '1px solid #d1d5db',
+                borderRadius: '3px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
+                padding: '3.5rem 4rem',
+                fontFamily: "Georgia, 'Times New Roman', serif",
+                fontSize: '0.9375rem',
+                lineHeight: '1.85',
+                color: '#1f2937',
+                textAlign: 'justify',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {file.content}
+            </div>
+          )}
         </div>
       </div>
 
