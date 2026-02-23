@@ -81,28 +81,56 @@ def stream_rag_response(
     query: str,
     context_chunks: List[dict],
     history: List[dict],
+    full_text: str = "",
 ) -> Iterator[str]:
-    """Answer a document-specific query grounded in retrieved contract clauses."""
-    context_text = "\n\n".join(
-        f"[{c['header']}]\n{c['text']}" for c in context_chunks
+    """Answer a document-specific query grounded in retrieved contract clauses.
+
+    The full document text (if provided) is included as broad context so the
+    model is aware of the entire contract.  Retrieved chunks are surfaced as
+    HIGHLY RELEVANT so the model prioritises them for the specific answer.
+    """
+    retrieved = "\n\n".join(
+        f"[HIGHLY RELEVANT — {c['header']}]\n{c['text']}" for c in context_chunks
     )
+
+    doc_section = ""
+    if full_text:
+        truncated = full_text[:12000]
+        suffix = "\n[...document continues...]" if len(full_text) > 12000 else ""
+        doc_section = (
+            "FULL CONTRACT TEXT (for broad context):\n"
+            f"{truncated}{suffix}\n\n"
+        )
+
     system = (
-        "You are a legal document assistant. Answer questions accurately using "
-        "the contract excerpts below. Cite the clause header when relevant. "
-        "If the excerpts do not contain the answer, say so clearly rather than "
-        "guessing. Use plain English — avoid unnecessary legal jargon.\n\n"
-        f"CONTRACT EXCERPTS:\n{context_text}"
+        "You are a legal document assistant.\n\n"
+        + doc_section
+        + "HIGHLY RELEVANT EXCERPTS (answer primarily from these):\n"
+        + retrieved
+        + "\n\nAnswer the user's question accurately. Cite the clause header when "
+        "relevant. If the document does not contain the answer, say so clearly "
+        "rather than guessing. Use plain English."
     )
     yield from _stream(system, history + [{"role": "user", "content": query}], temperature=0.2)
 
 
-def stream_direct_response(query: str, history: List[dict]) -> Iterator[str]:
-    """Answer a general query without document retrieval."""
+def stream_direct_response(query: str, history: List[dict], full_text: str = "") -> Iterator[str]:
+    """Answer a general query. Includes full document text when available."""
+    doc_section = ""
+    if full_text:
+        truncated = full_text[:12000]
+        suffix = "\n[...document continues...]" if len(full_text) > 12000 else ""
+        doc_section = (
+            "\n\nCONTRACT TEXT (for reference):\n"
+            f"{truncated}{suffix}"
+        )
+
     system = (
         "You are a knowledgeable legal assistant. Answer the user's question "
         "clearly and concisely. For general legal concepts, give accurate "
         "definitions in plain English. Always recommend consulting a qualified "
         "attorney for specific legal advice."
+        + doc_section
     )
     yield from _stream(system, history + [{"role": "user", "content": query}], temperature=0.4)
 

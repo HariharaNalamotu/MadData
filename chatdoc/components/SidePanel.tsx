@@ -9,6 +9,7 @@ import ChatMessage from './ChatMessage';
 interface SidePanelProps {
   highlight: HighlightSegment;
   fileDocId: string;
+  fileContent: string;
   chatbotName: string;
   onClose: () => void;
   onSaveMessages: (highlightId: string, messages: ChatMsg[]) => void;
@@ -17,6 +18,7 @@ interface SidePanelProps {
 export default function SidePanel({
   highlight,
   fileDocId,
+  fileContent,
   chatbotName,
   onClose,
   onSaveMessages,
@@ -37,12 +39,15 @@ export default function SidePanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-send pendingQuery on first mount (from "Ask" selection popup)
+  // Auto-send pendingQuery on first mount, but only if the conversation has
+  // no saved messages — prevents re-firing when the user closes and reopens
+  // the same highlight panel.
   useEffect(() => {
-    if (highlight.pendingQuery) {
+    if (highlight.pendingQuery && highlight.messages.length === 0) {
       send(highlight.pendingQuery, {
-        docId: fileDocId,
+        docId:        fileDocId,
         selectedText: highlight.selectedText,
+        fullText:     fileContent,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,8 +61,9 @@ export default function SidePanel({
   const handleSend = () => {
     if (!input.trim() || isLoading) return;
     send(input, {
-      docId: fileDocId,
+      docId:        fileDocId,
       selectedText: highlight.selectedText,
+      fullText:     fileContent,
     });
   };
 

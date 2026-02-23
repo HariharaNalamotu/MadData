@@ -63,6 +63,7 @@ export interface ChatParams {
   docId?: string;
   history?: { role: 'user' | 'assistant'; content: string }[];
   selectedText?: string;
+  fullText?: string;
 }
 
 /**
@@ -82,6 +83,7 @@ export async function chatStream(params: ChatParams): Promise<ReadableStream<Uin
       doc_id:        params.docId ?? '',
       history:       params.history ?? [],
       selected_text: params.selectedText ?? '',
+      full_text:     params.fullText ?? '',
     }),
   });
 

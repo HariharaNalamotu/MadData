@@ -38,6 +38,11 @@ export default function Home() {
   chatbotNameRef.current = chatbotName;
   highlightCounterRef.current = highlightCounter;
 
+  // Per-document main chat history — keyed by fileId
+  const mainChatHistoriesRef = useRef<Record<string, ChatMsg[]>>({});
+  const mainMessagesRef = useRef<ChatMsg[]>([]);
+  const prevFileIdRef = useRef<string | null>(null);
+
   const selectedFile = files.find((f) => f.id === selectedFileId) ?? null;
   selectedFileRef.current = selectedFile;
 
@@ -47,12 +52,27 @@ export default function Home() {
   // Main document chat (bottom query bar)
   const {
     messages: mainMessages,
+    setMessages: setMainMessages,
     input: mainInput,
     setInput: setMainInput,
     send: sendMain,
     isLoading: mainLoading,
     status: mainStatus,
   } = useStreamingChat([]);
+
+  // Keep messages ref always current (used in file-switch effect below)
+  mainMessagesRef.current = mainMessages;
+
+  // Save/restore per-file chat history when the active document changes
+  useEffect(() => {
+    const prevId = prevFileIdRef.current;
+    if (prevId !== null) {
+      mainChatHistoriesRef.current[prevId] = mainMessagesRef.current;
+    }
+    setMainMessages(mainChatHistoriesRef.current[selectedFileId ?? ''] ?? []);
+    prevFileIdRef.current = selectedFileId;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFileId]);
 
   // Auto-scroll main chat
   useEffect(() => {
@@ -101,6 +121,7 @@ export default function Home() {
       delete next[id];
       return next;
     });
+    delete mainChatHistoriesRef.current[id];
   }, []);
 
   const handleFileSelect = useCallback((id: string) => {
@@ -263,7 +284,8 @@ export default function Home() {
   const handleMainQuerySubmit = useCallback(() => {
     if (!mainInput.trim() || mainLoading) return;
     sendMain(mainInput, {
-      docId: selectedFileRef.current?.docId,
+      docId:    selectedFileRef.current?.docId,
+      fullText: selectedFileRef.current?.content,
     });
   }, [mainInput, mainLoading, sendMain]);
 
@@ -376,6 +398,7 @@ export default function Home() {
               key={activeHighlight.id}
               highlight={activeHighlight}
               fileDocId={selectedFile?.docId ?? ''}
+              fileContent={selectedFile?.content ?? ''}
               chatbotName={chatbotName}
               onClose={() => {
                 setSidePanelOpen(false);

@@ -14,6 +14,8 @@ export interface SendOptions {
   docId?: string;
   /** Highlighted clause for context in side-panel conversations */
   selectedText?: string;
+  /** Full document text — gives Qwen whole-document context */
+  fullText?: string;
 }
 
 export function useStreamingChat(initialMessages: ChatMsg[] = []) {
@@ -44,6 +46,7 @@ export function useStreamingChat(initialMessages: ChatMsg[] = []) {
           docId:        options.docId,
           history,
           selectedText: options.selectedText,
+          fullText:     options.fullText,
         });
 
         const reader = stream.getReader();

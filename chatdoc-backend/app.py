@@ -177,6 +177,7 @@ def chat():
     doc_id: str = (data.get("doc_id") or "").strip()
     history: list = data.get("history") or []
     selected_text: str = (data.get("selected_text") or "").strip()
+    full_text: str = (data.get("full_text") or "").strip()
 
     if not query:
         return jsonify({"error": "'query' is required"}), 400
@@ -208,15 +209,16 @@ def chat():
                 hits = search_similar(query_emb, doc_id, top_k=5)
                 yield "__STATUS__:Qwen is thinking...\n"
                 if hits:
-                    yield from stream_rag_response(effective_query, hits, clean_history)
+                    yield from stream_rag_response(effective_query, hits, clean_history, full_text)
                 else:
                     yield from stream_direct_response(
                         effective_query + "\n\n(Note: no matching clauses found in the document.)",
                         clean_history,
+                        full_text,
                     )
             else:
                 yield "__STATUS__:Qwen is thinking...\n"
-                yield from stream_direct_response(effective_query, clean_history)
+                yield from stream_direct_response(effective_query, clean_history, full_text)
         except Exception as exc:
             logger.exception("Chat streaming error")
             yield f"\n\n[Error: {exc}]"
